@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Renk Veri Üretici</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Düzen: üstte ayarlar ve tek indirme düğmesi, altta her renk için bir satır önizleme ve test sahneleri */
+:root {
+  --bg: #f3f5f2; --panel: #ffffff; --ink: #18201c; --muted: #5d6a63; --line: #d6ddd8;
+  --accent: #1f6f4a; --accent-ink: #ffffff;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #111613; --panel: #1a211d; --ink: #e6ece8; --muted: #9aa7a0; --line: #2d3832; --accent: #4fbf87; --accent-ink: #0c1410; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #111613; --panel: #1a211d; --ink: #e6ece8; --muted: #9aa7a0; --line: #2d3832; --accent: #4fbf87; --accent-ink: #0c1410; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--display); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1060px; margin: 0 auto; padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 22px; }
+h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -0.02em; margin: 0; }
+h2 { font-size: 17px; margin: 0; }
+.lead { margin: 6px 0 0; color: var(--muted); max-width: 66ch; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.field { display: grid; gap: 4px; }
+.field label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+select, input[type=number] { font: 15px var(--display); padding: 8px; border-radius: 7px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button { font: 600 14px var(--display); border-radius: 7px; padding: 10px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status { color: var(--accent); font-size: 14px; min-height: 1.2em; margin: 0; }
+.cls { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; align-items: center; }
+@media (max-width: 520px) { .cls { grid-template-columns: minmax(0, 1fr); } }
+.name { font-family: var(--mono); font-size: 13px; }
+.thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.thumb { display: grid; gap: 3px; justify-items: center; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.thumb canvas { width: 64px; height: 64px; image-rendering: pixelated; border-radius: 4px; border: 1px solid var(--line); }
+.note { color: var(--muted); font-size: 13px; margin: 0; max-width: 75ch; }
+code { font-family: var(--mono); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Renk Veri Üretici</h1>
+    <p class="lead">Modeli eğitmek için tek renkli görseller, test etmek için karışık renkli 5×5 sahneler üretir. Her görselde aynı rengin açık, koyu, soluk ve gölgeli tonları bulunur; böylece model tek bir rengi ezberleyemez. Hepsi tek bir <code>foto.zip</code> olarak iner ve Colab defterine doğrudan yüklenir.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="h-set">
+    <h2 id="h-set">Ayarlar</h2>
+    <div class="controls">
+      <div class="field"><label for="nTrain">Her renkten eğitim görseli</label><input type="number" id="nTrain" min="2" max="30" value="6"></div>
+      <div class="field"><label for="size">Eğitim görseli boyutu</label>
+        <select id="size"><option value="5">5×5 (25 piksel)</option><option value="10">10×10 (100 piksel)</option><option value="20" selected>20×20 (400 piksel)</option></select></div>
+      <div class="field"><label for="variety">Ton çeşitliliği</label>
+        <select id="variety"><option value="1">Az (çok kolay)</option><option value="1.6">Orta</option><option value="2.2" selected>Çok (önerilen)</option></select></div>
+      <div class="field"><label for="nScene">5×5 test sahnesi</label><input type="number" id="nScene" min="2" max="40" value="12"></div>
+    </div>
+    <div class="row">
+      <button id="regen">Yeniden üret</button>
+      <button class="primary" id="dl">foto.zip indir</button>
+    </div>
+    <p class="status" id="status" role="status"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-train">
+    <h2 id="h-train">Eğitim görselleri</h2>
+    <div id="train" style="display:grid;gap:14px"></div>
+    <p class="note">Her rengin son görseli defterde teste ayrılır, model onu eğitimde görmez.</p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-scene">
+    <h2 id="h-scene">Test sahneleri (5×5)</h2>
+    <div class="thumbs" id="scenes"></div>
+    <p class="note">Her sahnede bir renk açıkça en çok bulunur (eşitlik yok); dosya adının sonu o renktir. Defter, modelin bu rengi doğru bulup bulmadığını, yani doğru LED'in yanıp yanmayacağını ölçer.</p>
+  </section>
+</div>
+
+<script>
+// Her renk için ton (hue) merkezi ve izin verilen sapma; aralıklar birbirine değmez.
+const CLASSES = [
+  { key: "kirmizi", ad: "Kırmızı", hue: 0,   spread: 12 },
+  { key: "yesil",   ad: "Yeşil",   hue: 120, spread: 18 },
+  { key: "mavi",    ad: "Mavi",    hue: 222, spread: 14 },
+  { key: "sari",    ad: "Sarı",    hue: 52,  spread: 7 },
+];
+const $ = id => document.getElementById(id);
+let data = null;
+
+function hsl2rgb(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [r + m, g + m, b + m].map(v => Math.max(0, Math.min(255, Math.round(v * 255))));
+}
+const rnd = (a, b) => a + Math.random() * (b - a);
+const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+
+// Bir rengin rastgele bir tonu: ton kayması, doygunluk, açıklık, sonra kamera gürültüsü
+function tone(cls, k, base) {
+  const h = base.h + rnd(-1, 1) * cls.spread * k * 0.5;
+  const s = Math.max(0.35, Math.min(1, base.s + rnd(-0.15, 0.15) * k));
+  const l = Math.max(0.22, Math.min(0.72, base.l + rnd(-0.12, 0.12) * k));
+  return hsl2rgb(h, s, l).map(v => Math.max(0, Math.min(255, Math.round(v + gauss() * 6 * k))));
+}
+function baseTone(cls, k) {
+  return { h: cls.hue + rnd(-1, 1) * cls.spread * k * 0.6, s: rnd(0.55, 1), l: rnd(0.32, 0.62) };
+}
+
+function makeImage(n, pixelFn) {
+  const c = document.createElement("canvas"); c.width = c.height = n;
+  const x = c.getContext("2d"), d = x.createImageData(n, n);
+  for (let i = 0; i < n * n; i++) { const p = pixelFn(i); d.data.set([p[0], p[1], p[2], 255], i * 4); }
+  x.putImageData(d, 0, 0); return c;
+}
+
+function generate() {
+  const nTrain = Math.max(2, Math.min(30, +$("nTrain").value || 6));
+  const nScene = Math.max(2, Math.min(40, +$("nScene").value || 12));
+  const size = +$("size").value, k = +$("variety").value;
+  const train = CLASSES.map(cls => Array.from({ length: nTrain }, () => {
+    const base = baseTone(cls, k);
+    // görselin bir köşesi gölgeli, öbür köşesi daha aydınlık olsun
+    const dir = rnd(0, Math.PI * 2);
+    return makeImage(size, i => {
+      const x = (i % size) / size - 0.5, y = Math.floor(i / size) / size - 0.5;
+      const shade = (x * Math.cos(dir) + y * Math.sin(dir)) * 0.25 * k;
+      return tone(cls, k, { ...base, l: base.l + shade });
+    });
+  }));
+  const scenes = Array.from({ length: nScene }, (_, s) => {
+    const dom = s % 4;                                   // baskın renk sırayla, her renk eşit sayıda
+    const domCount = 9 + Math.floor(Math.random() * 7);  // 9..15 kare
+    const labels = Array(domCount).fill(dom);
+    while (labels.length < 25) {
+      const c = Math.floor(Math.random() * 4);
+      if (c !== dom && labels.filter(v => v === c).length < domCount - 2) labels.push(c);
+    }
+    labels.sort(() => Math.random() - 0.5);
+    const bases = CLASSES.map(cls => baseTone(cls, k));
+    return { dom, labels, canvas: makeImage(5, i => tone(CLASSES[labels[i]], k, bases[labels[i]])) };
+  });
+  data = { train, scenes };
+  render();
+}
+
+function thumb(canvas, label) {
+  const t = document.createElement("div"); t.className = "thumb";
+  const c = document.createElement("canvas"); c.width = canvas.width; c.height = canvas.height;
+  c.getContext("2d").drawImage(canvas, 0, 0);
+  const s = document.createElement("span"); s.textContent = label;
+  t.append(c, s); return t;
+}
+const pad = n => String(n).padStart(2, "0");
+function render() {
+  $("train").replaceChildren(...CLASSES.map((cls, ci) => {
+    const row = document.createElement("div"); row.className = "cls";
+    const n = document.createElement("div"); n.className = "name"; n.textContent = cls.ad;
+    const th = document.createElement("div"); th.className = "thumbs";
+    data.train[ci].forEach((c, i) => th.append(thumb(c, `${cls.key}_${i + 1}`)));
+    row.append(n, th); return row;
+  }));
+  $("scenes").replaceChildren(...data.scenes.map((s, i) => thumb(s.canvas, `sahne_${pad(i + 1)}_${CLASSES[s.dom].key}`)));
+  const px = (+$("size").value) ** 2;
+  $("status").textContent = `${CLASSES.length * data.train[0].length} eğitim görseli (her biri ${px} piksel), ${data.scenes.length} test sahnesi hazır.`;
+}
+
+// Küçük bir zip yazıcı (sıkıştırmasız); dış kütüphane gerekmez
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) { // files: [{name, bytes: Uint8Array}]
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.bytes), size = f.bytes.length;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint16(10, 0, true); h.setUint16(12, 0x21, true); h.setUint32(14, crc, true); h.setUint32(18, size, true);
+    h.setUint32(22, size, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+    parts.push(h, name, f.bytes);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint16(10, 0, true); c.setUint16(12, 0, true); c.setUint16(14, 0x21, true); c.setUint32(16, crc, true);
+    c.setUint32(20, size, true); c.setUint32(24, size, true); c.setUint16(28, name.length, true);
+    c.setUint32(42, offset, true);
+    central.push(c, name);
+    offset += 30 + name.length + size;
+  }
+  const csize = central.reduce((a, x) => a + x.byteLength, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, csize, true); e.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, e], { type: "application/zip" });
+}
+
+const toBlob = c => new Promise(r => c.toBlob(r, "image/png"));
+async function download() {
+  $("status").textContent = "Zip hazırlanıyor…";
+  const files = [], bytes = async c => new Uint8Array(await (await toBlob(c)).arrayBuffer());
+  for (let ci = 0; ci < CLASSES.length; ci++)
+    for (let i = 0; i < data.train[ci].length; i++)
+      files.push({ name: `foto/egitim/${CLASSES[ci].key}_${i + 1}.png`, bytes: await bytes(data.train[ci][i]) });
+  for (let i = 0; i < data.scenes.length; i++)
+    files.push({ name: `foto/sahne/sahne_${pad(i + 1)}_${CLASSES[data.scenes[i].dom].key}.png`, bytes: await bytes(data.scenes[i].canvas) });
+  const blob = makeZip(files);
+  // claude.ai içinde açıldıysa onun kaydetme penceresi, normal sitede tarayıcı indirmesi
+  let dl = null;
+  try { dl = window.claude ? await window.claude.use("downloads") : null; } catch { dl = null; }
+  if (dl) {
+    try { await dl.save({ filename: "foto.zip", data: blob }); $("status").textContent = "foto.zip kaydedildi."; }
+    catch (e) { $("status").textContent = e && e.code === "declined" ? "Kaydetme iptal edildi." : "Dosya kaydedilemedi."; }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "foto.zip";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  $("status").textContent = "foto.zip indirildi.";
+}
+
+$("regen").addEventListener("click", generate);
+["nTrain", "size", "variety", "nScene"].forEach(id => $(id).addEventListener("change", generate));
+$("dl").addEventListener("click", download);
+generate();
+</script>
+</body>
+</html>

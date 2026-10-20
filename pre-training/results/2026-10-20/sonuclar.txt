@@ -1,0 +1,8 @@
+Eğitim pikseli: 8000 (20 görsel), test pikseli: 1600 (4 görsel)
+Test doğruluğu (float): %91.9
+Test doğruluğu (4 bit): %88.5
+Akümülatör aralığı: -92 ... 91 -> en az 8 bit işaretli
+5x5 görüntü başına MAC: 300
+5x5 sahne testi: 11 / 12 doğru
+4 bit ağırlıklar (R,G,B): [[6, -7, 1], [-5, 7, -2], [-4, -2, 6], [3, 2, -4]]
+Sapmalar: [1, -4, 7, -5]
